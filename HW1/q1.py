@@ -9,6 +9,7 @@ def is_valid_word(word):
 
 class WordLadder(Problem):
 
+  # every action is in the form of an array [<index of string to replace>,<new char>]
   def actions(self, state):
     actions = []
     for i in range(len(state)):
@@ -28,9 +29,16 @@ class WordLadder(Problem):
   def value(self, state):
     return None
 
-q1_problem = WordLadder("cars", "cats") 
-print(breadth_first_tree_search(q1_problem).solution())
-print(depth_first_graph_search(q1_problem).solution())
+q1_problem_1 = WordLadder("cars", "cats") 
+q1_problem_2 = WordLadder("cold", "warm")
+q1_problem_3 = WordLadder("best", "math")
+
+print("'cars' -> 'cats':" + str(breadth_first_tree_search(q1_problem_1).solution()))
+print("'cold' -> 'warm':" + str(breadth_first_tree_search(q1_problem_2).solution()))
+print("'best' -> 'math':" + str(breadth_first_tree_search(q1_problem_3).solution()))
+
+# Other types of search functions can be used.
+# print(depth_first_graph_search(q1_problem_1).solution())
 
     
 
