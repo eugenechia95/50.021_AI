@@ -24,16 +24,17 @@ def solve_semi_magic(algorithm=backtracking_search, **args):
     csp_neighbors = {}
     csp_neighbors["V1"]=["V2","V3"]
     csp_neighbors['V2']=['V8','V5']
-    csp_neighbors['V3']=['V9','V6']
+    csp_neighbors['V3']=['V5','V7']
     csp_neighbors['V4']=['V6','V5']
     csp_neighbors['V5']=['V1','V9']
-    csp_neighbors['V6']=[]
+    csp_neighbors['V6']=['V3','V9']
     csp_neighbors['V7']=['V9','V8']
-    csp_neighbors['V8']=[]
-    csp_neighbors['V9']=[]
+    csp_neighbors['V8']=['V2','V5']
+    csp_neighbors['V9']=['V3','V6']
 
 
     def csp_constraints(A, a, B, b):
+        "A constraint saying two neighboring variables must differ in value."
         a != b
         # pass
 
