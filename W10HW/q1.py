@@ -2,60 +2,91 @@ from imgnetdatastuff import *
 import torch
 import torch.nn as nn
 from torchvision import transforms
+import numpy as np
+import matplotlib.pyplot as plt
 
-dataloader = dataset_imagenetvalpart("imgnet500", "ILSVRC2012_bbox_val_v3/val", 'synset_words.txt', 1)
+dataloader = dataset_imagenetvalpart("imgnet500", "ILSVRC2012_bbox_val_v3/val", 'synset_words.txt', 250)
+# item1 = dataloader.__getitem__(1)
+# print(item1)
 
-item1 = dataloader.__getitem__(0)
-
-model1 = torch.hub.load('pytorch/vision:v0.6.0', 'vgg16', pretrained=True)
-model2 = torch.hub.load('pytorch/vision:v0.6.0', 'vgg16_bn', pretrained=True)
+modelvgg = torch.hub.load('pytorch/vision:v0.6.0', 'vgg16', pretrained=True)
+modelvggbn = torch.hub.load('pytorch/vision:v0.6.0', 'vgg16_bn', pretrained=True)
+# print(modelvggbn)
 
 preprocess = transforms.Compose([
     transforms.Resize(256),
     transforms.CenterCrop(224),
     transforms.ToTensor(),
-    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
 ])
-input_tensor = preprocess(item1['image']).unsqueeze(0)
-# input_tensor = preprocess(dataloader)
 
-# print(model1)
-# print(item1)
-# print(input_tensor.shape)
-# print(item1)
-
-def addgradnorm(idx):
+def addgradnorm(model, idx, item_name):
 
   def printgradnorm(module, grad_input, grad_output):
-      print(module.__class__)
-      print('Inside ' + module.__class__.__name__ + ' backward')
-      print('Inside class:' + module.__class__.__name__)
-      print('')
-      print('grad_output: ', type(grad_output))
-      print('grad_output[0]: ', type(grad_output[0]))
-      print('')
-      print('grad_output size:', grad_output[0].size())
-      print('grad_output norm:', grad_output[0].norm())
-      item_filename = item1['filename'].split("/")[-1].split(".")[0]
-      filename = "%s_%s_layer%d.pt" %(item_filename, module.__class__.__name__, idx)
-      print(filename)
-      torch.save(grad_output[0].norm(), filename)
+    # print(module.__class__)
+    # print('Inside ' + module.__class__.__name__ + ' backward')
+    # print('Inside class:' + module.__class__.__name__)
+    # print('')
+    # print('grad_output: ', type(grad_output))
+    # print('grad_output[0]: ', type(grad_output[0]))
+    # print('')
+    # print('grad_output size:', grad_output[0].size())
+    # print('grad_output norm:', grad_output[0].norm())
+    item_filename = item_name.split("/")[-1].split(".")[0].split("_")[-1]
+    filename = "grad_norm/%s/%s_%s_layer%d.pt" %(model, item_filename, module.__class__.__name__, idx)
+    torch.save(grad_output[0].norm(), filename)
   return printgradnorm
 
-model1.features[0].register_backward_hook(addgradnorm(idx=0))
-model1.features[2].register_backward_hook(addgradnorm(idx=2))
-
-output = model1(input_tensor)
 loss_fn = nn.CrossEntropyLoss()
 target = torch.tensor([3], dtype=torch.long)
-# print(output)
-err = loss_fn(output, target)
-err.backward()
-# print(err.backward())
-# print(output[0])
+
+# Save grad norms of conv layers closest to input into files
+# for i in range(0,250):
+#   item = dataloader.__getitem__(i)
+#   modelvgg.features[0].register_backward_hook(addgradnorm(model="vgg", idx=0, item_name=item['filename']))
+#   modelvgg.features[2].register_backward_hook(addgradnorm(model="vgg", idx=2, item_name=item['filename']))
+#   modelvggbn.features[0].register_backward_hook(addgradnorm(model="vggbn", idx=0, item_name=item['filename']))
+#   modelvggbn.features[3].register_backward_hook(addgradnorm(model="vggbn", idx=2, item_name=item['filename']))
+
+#   input_tensor = preprocess(item['image']).unsqueeze(0)
+#   output = modelvgg(input_tensor)
+#   err = loss_fn(output, target)
+#   err.backward()
+#   output = modelvggbn(input_tensor)
+#   err = loss_fn(output, target)
+#   err.backward()
+
+grad_norm_array_vgg = []
+for filename in os.listdir("grad_norm/vgg/"):
+  x = torch.load("grad_norm/vgg/"+filename)
+  grad_norm_array_vgg.append(x.item())
+
+grad_norm_array_vggbn = []
+for filename in os.listdir("grad_norm/vggbn/"):
+  x = torch.load("grad_norm/vggbn/"+filename)
+  grad_norm_array_vggbn.append(x.item())
+
+def calculate_percentiles(grad_norm_array):
+  i = 5
+  gradNorm_percentiles = []
+  percentile_array = []
+  while i < 100:
+    gradNorm_percentiles.append(np.percentile(grad_norm_array, i))
+    percentile_array.append(i)
+    i += 5
+  return [gradNorm_percentiles,percentile_array]
 
 
 
+x = calculate_percentiles(grad_norm_array_vgg)
+plt.plot(x[1], x[0])
+plt.ylabel('Gradient Norms')
+plt.xlabel('Percentile')
+plt.suptitle('VGG')
+plt.show()
 
-# # print(model1)
-# model1.register_backward_hook(printgradnorm)
+x = calculate_percentiles(grad_norm_array_vggbn)
+plt.plot(x[1], x[0])
+plt.ylabel('Gradient Norms')
+plt.xlabel('Percentile')
+plt.suptitle('VGGBN')
+plt.show()
